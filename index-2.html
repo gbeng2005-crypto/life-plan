@@ -555,45 +555,17 @@ async function uploadPrivatePhoto(key,file){if(!hcUser||!file)return;cloudLabel(
 function wirePhotos(){[['currentPhoto','current'],['goalPhoto','goal'],['startPhoto','start']].forEach(([id,key])=>{const x=ae(id);if(!x||x.dataset.cloudWired)return;x.dataset.cloudWired='1';x.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)uploadPrivatePhoto(key,f)})})}
 async function refreshPhotos(){if(!hcUser)return;D.photos=D.photos||{};for(const k of ['start','current','goal']){const u=await privatePhotoUrl(k);if(u)D.photos[k]=u}if(typeof drawPhotos==='function')drawPhotos();wirePhotos()}
 async function enterSession(session){hcUser=session?.user||null;if(!hcUser){if(!hcRecovering)showAuth(true);cloudLabel('☁ SIGN IN');return}if(!hcRecovering)showAuth(false);ae('accountBtn').textContent=hcUser.email||'Account';await cloudLoad();await refreshPhotos()}
-function netErr(e){console.error('Higher Calling auth error:',e);return 'Could not reach the server. Check your internet connection, or the Supabase project may be paused/misconfigured. (See browser console for details.)'}
-ae('signInBtn').onclick=async()=>{
- authMsg('Signing in…');
- try{
-   const {data,error}=await sb.auth.signInWithPassword({email:ae('authEmail').value.trim(),password:ae('authPassword').value});
-   if(error){console.error('Sign in error:',error);authMsg(error.message)}
-   else{authMsg('');await enterSession(data.session)}
- }catch(e){authMsg(netErr(e))}
-};
-ae('forgotBtn').onclick=async()=>{
- const email=ae('authEmail').value.trim();
- if(!email){authMsg('Enter your email first.');return}
- authMsg('Sending password reset…');
- try{
-   const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-   if(error)console.error('Reset error:',error);
-   authMsg(error?error.message:'Reset email sent. Open it on this device.')
- }catch(e){authMsg(netErr(e))}
-};
-ae('setPasswordBtn').onclick=async()=>{
- const password=ae('newPassword').value;
- if(password.length<8){authMsg('Use at least 8 characters.');return}
- try{
-   const {error}=await sb.auth.updateUser({password});
-   if(error){console.error('Set password error:',error);authMsg(error.message);return}
-   ae('resetBox').style.display='none';authMsg('Password changed ✓');
-   const {data}=await sb.auth.getSession();await enterSession(data.session)
- }catch(e){authMsg(netErr(e))}
-};
+ae('signInBtn').onclick=async()=>{authMsg('Signing in…');const {data,error}=await sb.auth.signInWithPassword({email:ae('authEmail').value.trim(),password:ae('authPassword').value});if(error)authMsg(error.message);else{authMsg('');await enterSession(data.session)}};
+ae('forgotBtn').onclick=async()=>{const email=ae('authEmail').value.trim();if(!email){authMsg('Enter your email first.');return}authMsg('Sending password reset…');const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});authMsg(error?error.message:'Reset email sent. Open it on this device.')};
+ae('setPasswordBtn').onclick=async()=>{const password=ae('newPassword').value;if(password.length<8){authMsg('Use at least 8 characters.');return}const {error}=await sb.auth.updateUser({password});if(error){authMsg(error.message);return}ae('resetBox').style.display='none';authMsg('Password changed ✓');const {data}=await sb.auth.getSession();await enterSession(data.session)};
 ae('signUpBtn').onclick=async()=>{
  const email=ae('authEmail').value.trim(),password=ae('authPassword').value;
  if(!email||password.length<6){authMsg('Enter an email and password of at least 6 characters.');return}
  authMsg('Creating account…');
- try{
-   const {data,error}=await sb.auth.signUp({email,password});
-   if(error){console.error('Sign up error:',error);authMsg(error.message);return}
-   if(data.session){authMsg('');await enterSession(data.session);return}
-   authMsg('Account created. If email confirmation is required on this project, check your inbox and confirm before signing in.');
- }catch(e){authMsg(netErr(e))}
+ const {data,error}=await sb.auth.signUp({email,password});
+ if(error){authMsg(error.message);return}
+ if(data.session){authMsg('');await enterSession(data.session);return}
+ authMsg('This email already has an unconfirmed account. Use Sign in if confirmed, or create a fresh account after email confirmation is disabled.');
 };
 ae('accountBtn').onclick=async()=>{if(!hcUser){showAuth(true);return}if(confirm('Sign out?'))await sb.auth.signOut()};
 sb.auth.onAuthStateChange((event,session)=>{
